@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Math Formula Flashcards</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=JetBrains+Mono:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-chtml.min.js"></script>
+<style>
+  :root {
+    --bg: #0d0d0f;
+    --surface: #16161a;
+    --card-front: #1c1c22;
+    --card-back: #121a2e;
+    --accent: #e8c547;
+    --accent2: #5b8dee;
+    --text: #f0eee8;
+    --muted: #888;
+    --border: #2a2a35;
+    --tag-bg: #1e1e28;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 48px;
+  }
+
+  /* Noise texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { position: relative; z-index: 1; width: 100%; max-width: 720px; }
+
+  header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 5vw, 3rem);
+    color: var(--accent);
+    letter-spacing: -1px;
+    line-height: 1.1;
+  }
+
+  header p {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-top: 6px;
+    font-weight: 300;
+  }
+
+  /* Category Filter */
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 28px;
+  }
+
+  .filter-btn {
+    background: var(--tag-bg);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.02em;
+  }
+
+  .filter-btn:hover, .filter-btn.active {
+    background: var(--accent);
+    color: #0d0d0f;
+    border-color: var(--accent);
+  }
+
+  /* Progress Bar */
+  .progress-bar-wrap {
+    background: var(--border);
+    border-radius: 4px;
+    height: 4px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 4px;
+    transition: width 0.4s ease;
+  }
+
+  /* Counter */
+  .counter {
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 20px;
+    letter-spacing: 0.05em;
+  }
+  .counter span { color: var(--accent); }
+
+  /* Card */
+  .card-scene {
+    perspective: 1200px;
+    width: 100%;
+    height: 340px;
+    margin-bottom: 28px;
+    cursor: pointer;
+  }
+
+  .card {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .card.flipped { transform: rotateY(180deg); }
+
+  .card-face {
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    backface-visibility: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    border: 1px solid var(--border);
+    text-align: center;
+  }
+
+  .card-front {
+    background: var(--card-front);
+    background-image: radial-gradient(ellipse at top left, rgba(232,197,71,0.06) 0%, transparent 60%);
+  }
+
+  .card-back {
+    background: var(--card-back);
+    background-image: radial-gradient(ellipse at bottom right, rgba(91,141,238,0.08) 0%, transparent 60%);
+    transform: rotateY(180deg);
+  }
+
+  .card-label {
+    position: absolute;
+    top: 16px;
+    left: 20px;
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .card-category {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: rgba(232,197,71,0.08);
+    padding: 3px 10px;
+    border-radius: 10px;
+  }
+
+  .card-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.1rem, 3vw, 1.5rem);
+    color: var(--text);
+    margin-bottom: 20px;
+    line-height: 1.3;
+  }
+
+  .card-formula {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: clamp(1rem, 3vw, 1.3rem);
+    color: var(--accent2);
+    line-height: 1.6;
+    max-width: 90%;
+  }
+
+  .card-hint {
+    position: absolute;
+    bottom: 14px;
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+
+  /* Navigation */
+  .nav {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .nav-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 500;
+    padding: 10px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+
+  .nav-btn:hover { background: var(--border); }
+
+  .nav-btn.primary {
+    background: var(--accent);
+    color: #0d0d0f;
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+
+  .nav-btn.primary:hover { opacity: 0.88; }
+
+  .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* Study mode toggle */
+  .mode-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 10px;
+  }
+
+  .mode-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem;
+    padding: 5px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+
+  .mode-btn.active {
+    background: var(--accent2);
+    color: white;
+    border-color: var(--accent2);
+  }
+
+  .mode-btn:hover { border-color: var(--accent2); }
+
+  .mjx-chtml { font-size: 1em !important; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Math Formula Cards</h1>
+    <p>Arithmetic · Algebra · Geometry · Trig · Precalculus</p>
+  </header>
+
+  <div class="filters" id="filters"></div>
+
+  <div class="progress-bar-wrap">
+    <div class="progress-bar-fill" id="progressBar" style="width:0%"></div>
+  </div>
+
+  <div class="counter" id="counter">Card <span id="cardNum">1</span> of <span id="cardTotal">0</span></div>
+
+  <div class="card-scene" onclick="flipCard()">
+    <div class="card" id="card">
+      <div class="card-face card-front">
+        <span class="card-label">Formula Name</span>
+        <span class="card-category" id="frontCategory"></span>
+        <div class="card-title" id="frontTitle"></div>
+        <div class="card-formula" id="frontHint"></div>
+        <span class="card-hint">click to reveal →</span>
+      </div>
+      <div class="card-face card-back">
+        <span class="card-label">Formula</span>
+        <span class="card-category" id="backCategory"></span>
+        <div class="card-title" id="backTitle"></div>
+        <div class="card-formula" id="backFormula"></div>
+        <span class="card-hint">click to flip back</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="mode-row">
+    <button class="mode-btn active" id="btnSequential" onclick="setMode('sequential')">Sequential</button>
+    <button class="mode-btn" id="btnShuffle" onclick="setMode('shuffle')">Shuffle</button>
+  </div>
+
+  <div class="nav">
+    <button class="nav-btn" id="prevBtn" onclick="prevCard()">← Prev</button>
+    <button class="nav-btn primary" onclick="flipCard()">Flip</button>
+    <button class="nav-btn" id="nextBtn" onclick="nextCard()">Next →</button>
+  </div>
+</div>
+
+<script>
+const allCards = [
+  // ── ARITHMETIC ──
+  { cat: "Arithmetic", title: "Order of Operations", formula: "PEMDAS: Parentheses · Exponents · Multiplication/Division · Addition/Subtraction" },
+  { cat: "Arithmetic", title: "Properties of Zero", formula: "a + 0 = a  |  a · 0 = 0  |  0/a = 0  |  a/0 = undefined" },
+  { cat: "Arithmetic", title: "Properties of One", formula: "a · 1 = a  |  a¹ = a  |  a/1 = a" },
+  { cat: "Arithmetic", title: "Divisibility Rules", formula: "2: even  |  3: digit sum div by 3  |  5: ends in 0 or 5  |  9: digit sum div by 9" },
+  { cat: "Arithmetic", title: "Fraction Operations", formula: "a/b · c/d = ac/bd  |  a/b ÷ c/d = a/b · d/c  |  a/b + c/b = (a+c)/b" },
+  { cat: "Arithmetic", title: "Percent Formula", formula: "Part = (Percent/100) × Whole" },
+  { cat: "Arithmetic", title: "Prime Factorization", formula: "Every integer > 1 is either prime or a unique product of primes" },
+  { cat: "Arithmetic", title: "LCM & GCF Relationship", formula: "LCM(a,b) × GCF(a,b) = a × b" },
+  { cat: "Arithmetic", title: "Absolute Value", formula: "|a| = a if a ≥ 0; |a| = −a if a < 0" },
+
+  // ── ALGEBRA ──
+  { cat: "Algebra", title: "Commutative Property", formula: "a + b = b + a  |  ab = ba" },
+  { cat: "Algebra", title: "Associative Property", formula: "(a+b)+c = a+(b+c)  |  (ab)c = a(bc)" },
+  { cat: "Algebra", title: "Distributive Property", formula: "a(b + c) = ab + ac" },
+  { cat: "Algebra", title: "Zero Product Property", formula: "If ab = 0, then a = 0 or b = 0" },
+  { cat: "Algebra", title: "Quadratic Formula", formula: "x = (−b ± √(b²−4ac)) / 2a  for ax²+bx+c = 0" },
+  { cat: "Algebra", title: "Discriminant", formula: "Δ = b²−4ac  |  Δ>0: 2 real roots  |  Δ=0: 1 real  |  Δ<0: complex" },
+  { cat: "Algebra", title: "Completing the Square", formula: "x² + bx + c = (x + b/2)² − (b/2)² + c" },
+  { cat: "Algebra", title: "Difference of Squares", formula: "a² − b² = (a+b)(a−b)" },
+  { cat: "Algebra", title: "Perfect Square Trinomials", formula: "(a±b)² = a² ± 2ab + b²" },
+  { cat: "Algebra", title: "Sum / Difference of Cubes", formula: "a³±b³ = (a±b)(a²∓ab+b²)" },
+  { cat: "Algebra", title: "Laws of Exponents", formula: "aᵐaⁿ=aᵐ⁺ⁿ  |  aᵐ/aⁿ=aᵐ⁻ⁿ  |  (aᵐ)ⁿ=aᵐⁿ  |  a⁰=1  |  a⁻ⁿ=1/aⁿ" },
+  { cat: "Algebra", title: "Radical Rules", formula: "√(ab)=√a·√b  |  ⁿ√a = a^(1/n)  |  √a·√a = a" },
+  { cat: "Algebra", title: "Slope Formula", formula: "m = (y₂−y₁) / (x₂−x₁)" },
+  { cat: "Algebra", title: "Slope-Intercept Form", formula: "y = mx + b  (m = slope, b = y-intercept)" },
+  { cat: "Algebra", title: "Point-Slope Form", formula: "y − y₁ = m(x − x₁)" },
+  { cat: "Algebra", title: "Standard Form Line", formula: "Ax + By = C" },
+  { cat: "Algebra", title: "Parallel & Perpendicular Slopes", formula: "Parallel: m₁ = m₂  |  Perpendicular: m₁ · m₂ = −1" },
+  { cat: "Algebra", title: "Distance Formula", formula: "d = √((x₂−x₁)² + (y₂−y₁)²)" },
+  { cat: "Algebra", title: "Midpoint Formula", formula: "M = ((x₁+x₂)/2 , (y₁+y₂)/2)" },
+  { cat: "Algebra", title: "Vertex of a Parabola", formula: "x = −b/2a  gives vertex x; then sub back for y" },
+  { cat: "Algebra", title: "Equation of a Circle", formula: "(x−h)² + (y−k)² = r²  |  Center (h,k), radius r" },
+  { cat: "Algebra", title: "Logarithm Definition", formula: "logₐ(b) = c  ⟺  aᶜ = b" },
+  { cat: "Algebra", title: "Log Product Rule", formula: "logₐ(MN) = logₐM + logₐN" },
+  { cat: "Algebra", title: "Log Quotient Rule", formula: "logₐ(M/N) = logₐM − logₐN" },
+  { cat: "Algebra", title: "Log Power Rule", formula: "logₐ(Mⁿ) = n·logₐM" },
+  { cat: "Algebra", title: "Change of Base", formula: "logₐb = log(b)/log(a) = ln(b)/ln(a)" },
+  { cat: "Algebra", title: "Natural Log Identity", formula: "ln(eˣ) = x  |  e^(ln x) = x  |  ln(1) = 0" },
+  { cat: "Algebra", title: "Exponential Growth/Decay", formula: "A = A₀ · eᵏᵗ  |  k>0 growth, k<0 decay" },
+
+  // ── SEQUENCES & SERIES ──
+  { cat: "Sequences", title: "Arithmetic Sequence Nth Term", formula: "aₙ = a₁ + (n−1)d  |  d = common difference" },
+  { cat: "Sequences", title: "Arithmetic Series Sum", formula: "Sₙ = n/2 · (a₁ + aₙ)  =  n/2 · (2a₁ + (n−1)d)" },
+  { cat: "Sequences", title: "Geometric Sequence Nth Term", formula: "aₙ = a₁ · rⁿ⁻¹  |  r = common ratio" },
+  { cat: "Sequences", title: "Geometric Series Sum (finite)", formula: "Sₙ = a₁(1 − rⁿ)/(1 − r)  for r ≠ 1" },
+  { cat: "Sequences", title: "Infinite Geometric Series", formula: "S = a₁/(1−r)  only if |r| < 1" },
+  { cat: "Sequences", title: "Binomial Theorem", formula: "(a+b)ⁿ = Σ C(n,k) aⁿ⁻ᵏ bᵏ  for k=0..n" },
+  { cat: "Sequences", title: "Binomial Coefficient", formula: "C(n,k) = n! / (k!(n−k)!)" },
+
+  // ── GEOMETRY ──
+  { cat: "Geometry", title: "Triangle Area", formula: "A = ½bh  |  Also A = ½ab·sinC" },
+  { cat: "Geometry", title: "Heron's Formula", formula: "A = √(s(s−a)(s−b)(s−c))  where s=(a+b+c)/2" },
+  { cat: "Geometry", title: "Pythagorean Theorem", formula: "a² + b² = c²  (right triangle, c = hypotenuse)" },
+  { cat: "Geometry", title: "Triangle Angle Sum", formula: "∠A + ∠B + ∠C = 180°" },
+  { cat: "Geometry", title: "Rectangle / Parallelogram", formula: "Rectangle: A = lw  |  Parallelogram: A = bh" },
+  { cat: "Geometry", title: "Trapezoid Area", formula: "A = ½(b₁+b₂)h" },
+  { cat: "Geometry", title: "Circle: Area & Circumference", formula: "A = πr²  |  C = 2πr = πd" },
+  { cat: "Geometry", title: "Arc Length", formula: "s = rθ  (θ in radians)" },
+  { cat: "Geometry", title: "Sector Area", formula: "A = ½r²θ  (θ in radians)" },
+  { cat: "Geometry", title: "Rectangular Prism", formula: "V = lwh  |  SA = 2(lw+lh+wh)" },
+  { cat: "Geometry", title: "Cylinder", formula: "V = πr²h  |  SA = 2πr² + 2πrh" },
+  { cat: "Geometry", title: "Sphere", formula: "V = 4/3 πr³  |  SA = 4πr²" },
+  { cat: "Geometry", title: "Cone", formula: "V = ⅓πr²h  |  Slant SA = πrl + πr²" },
+  { cat: "Geometry", title: "Sum of Interior Angles (polygon)", formula: "(n−2)·180°  for n-sided polygon" },
+  { cat: "Geometry", title: "Law of Sines", formula: "sin A/a = sin B/b = sin C/c" },
+  { cat: "Geometry", title: "Law of Cosines", formula: "c² = a² + b² − 2ab·cosC" },
+
+  // ── TRIGONOMETRY ──
+  { cat: "Trigonometry", title: "SOH-CAH-TOA", formula: "sin=opp/hyp  |  cos=adj/hyp  |  tan=opp/adj" },
+  { cat: "Trigonometry", title: "Reciprocal Identities", formula: "csc=1/sin  |  sec=1/cos  |  cot=1/tan" },
+  { cat: "Trigonometry", title: "Quotient Identities", formula: "tan θ = sin θ/cos θ  |  cot θ = cos θ/sin θ" },
+  { cat: "Trigonometry", title: "Pythagorean Identity #1", formula: "sin²θ + cos²θ = 1" },
+  { cat: "Trigonometry", title: "Pythagorean Identity #2", formula: "1 + tan²θ = sec²θ" },
+  { cat: "Trigonometry", title: "Pythagorean Identity #3", formula: "1 + cot²θ = csc²θ" },
+  { cat: "Trigonometry", title: "Unit Circle: Key Angles (deg→rad)", formula: "0°=0  30°=π/6  45°=π/4  60°=π/3  90°=π/2  180°=π  270°=3π/2  360°=2π" },
+  { cat: "Trigonometry", title: "Key Trig Values: sin", formula: "sin 0=0  sin 30°=½  sin 45°=√2/2  sin 60°=√3/2  sin 90°=1" },
+  { cat: "Trigonometry", title: "Key Trig Values: cos", formula: "cos 0°=1  cos 30°=√3/2  cos 45°=√2/2  cos 60°=½  cos 90°=0" },
+  { cat: "Trigonometry", title: "Even/Odd Identities", formula: "cos(−θ)=cosθ (even)  |  sin(−θ)=−sinθ (odd)  |  tan(−θ)=−tanθ (odd)" },
+  { cat: "Trigonometry", title: "Cofunction Identities", formula: "sin(90°−θ)=cosθ  |  tan(90°−θ)=cotθ  |  sec(90°−θ)=cscθ" },
+  { cat: "Trigonometry", title: "Sum Formulas: sin & cos", formula: "sin(A±B)=sinA cosB ± cosA sinB  |  cos(A±B)=cosA cosB ∓ sinA sinB" },
+  { cat: "Trigonometry", title: "Double Angle: sin", formula: "sin 2θ = 2 sinθ cosθ" },
+  { cat: "Trigonometry", title: "Double Angle: cos", formula: "cos 2θ = cos²θ − sin²θ = 1−2sin²θ = 2cos²θ−1" },
+  { cat: "Trigonometry", title: "Half Angle: sin & cos", formula: "sin(θ/2)=±√((1−cosθ)/2)  |  cos(θ/2)=±√((1+cosθ)/2)" },
+  { cat: "Trigonometry", title: "Product-to-Sum: sin·sin", formula: "sinA sinB = ½[cos(A−B) − cos(A+B)]" },
+  { cat: "Trigonometry", title: "Product-to-Sum: cos·cos", formula: "cosA cosB = ½[cos(A−B) + cos(A+B)]" },
+  { cat: "Trigonometry", title: "Amplitude & Period of sin/cos", formula: "y=A sin(Bx+C)+D  |  Period=2π/|B|  |  Amplitude=|A|" },
+  { cat: "Trigonometry", title: "Period of tan/cot", formula: "y=tan(Bx): Period = π/|B|" },
+  { cat: "Trigonometry", title: "Inverse Trig Ranges", formula: "arcsin: [−π/2,π/2]  arccos: [0,π]  arctan: (−π/2,π/2)" },
+
+  // ── PRECALCULUS ──
+  { cat: "Precalculus", title: "Composition of Functions", formula: "(f∘g)(x) = f(g(x))" },
+  { cat: "Precalculus", title: "Inverse Function Property", formula: "f(f⁻¹(x)) = x  |  f⁻¹(f(x)) = x" },
+  { cat: "Precalculus", title: "Polynomial Remainder Theorem", formula: "p(c) = remainder when p(x) is divided by (x−c)" },
+  { cat: "Precalculus", title: "Factor Theorem", formula: "(x−c) is a factor of p(x)  ⟺  p(c) = 0" },
+  { cat: "Precalculus", title: "Rational Root Theorem", formula: "Possible rational roots = ±(factors of constant)/(factors of leading coeff)" },
+  { cat: "Precalculus", title: "Fundamental Theorem of Algebra", formula: "Every polynomial of degree n ≥ 1 has exactly n complex roots (with multiplicity)" },
+  { cat: "Precalculus", title: "Vertical Asymptote (rational fn)", formula: "Set denominator = 0 (and numerator ≠ 0 at that x)" },
+  { cat: "Precalculus", title: "Horizontal Asymptote", formula: "deg N < deg D: y=0  |  deg N = deg D: y=leading coeffs ratio  |  deg N > deg D: none" },
+  { cat: "Precalculus", title: "Ellipse (standard form)", formula: "x²/a² + y²/b² = 1  |  a²>b²: horizontal major axis" },
+  { cat: "Precalculus", title: "Hyperbola (standard form)", formula: "x²/a² − y²/b² = 1  (horizontal) or  y²/a² − x²/b² = 1  (vertical)" },
+  { cat: "Precalculus", title: "Parabola (standard form)", formula: "x² = 4py (vertical)  |  y² = 4px (horizontal)  |  Focus distance = p" },
+  { cat: "Precalculus", title: "Polar ↔ Rectangular", formula: "x=r cosθ  |  y=r sinθ  |  r²=x²+y²  |  tanθ=y/x" },
+  { cat: "Precalculus", title: "DeMoivre's Theorem", formula: "[r(cosθ+i sinθ)]ⁿ = rⁿ(cos nθ + i sin nθ)" },
+  { cat: "Precalculus", title: "Complex Number Modulus", formula: "|a+bi| = √(a²+b²)" },
+  { cat: "Precalculus", title: "Compound Interest", formula: "A = P(1 + r/n)^(nt)  |  Continuous: A = Pe^(rt)" },
+  { cat: "Precalculus", title: "Permutations & Combinations", formula: "P(n,r) = n!/(n−r)!  |  C(n,r) = n!/(r!(n−r)!)" },
+];
+
+const categories = ["All", ...new Set(allCards.map(c => c.cat))];
+let activeCategory = "All";
+let filteredCards = [...allCards];
+let currentIndex = 0;
+let isFlipped = false;
+let mode = 'sequential';
+let shuffledOrder = [];
+
+function init() {
+  // Build filters
+  const filtersEl = document.getElementById('filters');
+  categories.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn' + (cat === 'All' ? ' active' : '');
+    btn.textContent = cat;
+    btn.onclick = () => setCategory(cat);
+    filtersEl.appendChild(btn);
+  });
+  filterCards();
+}
+
+function setCategory(cat) {
+  activeCategory = cat;
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent === cat);
+  });
+  filterCards();
+}
+
+function filterCards() {
+  filteredCards = activeCategory === 'All' ? [...allCards] : allCards.filter(c => c.cat === activeCategory);
+  shuffledOrder = [...Array(filteredCards.length).keys()];
+  if (mode === 'shuffle') shuffle(shuffledOrder);
+  currentIndex = 0;
+  isFlipped = false;
+  document.getElementById('card').classList.remove('flipped');
+  updateCard();
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('btnSequential').classList.toggle('active', m === 'sequential');
+  document.getElementById('btnShuffle').classList.toggle('active', m === 'shuffle');
+  if (m === 'shuffle') shuffle(shuffledOrder);
+  currentIndex = 0;
+  isFlipped = false;
+  document.getElementById('card').classList.remove('flipped');
+  updateCard();
+}
+
+function getCard() {
+  return filteredCards[shuffledOrder[currentIndex]];
+}
+
+function updateCard() {
+  const c = getCard();
+  document.getElementById('frontCategory').textContent = c.cat;
+  document.getElementById('backCategory').textContent = c.cat;
+  document.getElementById('frontTitle').textContent = c.title;
+  document.getElementById('backTitle').textContent = c.title;
+  document.getElementById('frontHint').textContent = '';
+  document.getElementById('backFormula').textContent = c.formula;
+
+  const n = filteredCards.length;
+  document.getElementById('cardNum').textContent = currentIndex + 1;
+  document.getElementById('cardTotal').textContent = n;
+  document.getElementById('progressBar').style.width = ((currentIndex + 1) / n * 100) + '%';
+  document.getElementById('prevBtn').disabled = currentIndex === 0;
+  document.getElementById('nextBtn').disabled = currentIndex === n - 1;
+}
+
+function flipCard() {
+  isFlipped = !isFlipped;
+  document.getElementById('card').classList.toggle('flipped', isFlipped);
+}
+
+function nextCard() {
+  if (currentIndex < filteredCards.length - 1) {
+    currentIndex++;
+    isFlipped = false;
+    document.getElementById('card').classList.remove('flipped');
+    updateCard();
+  }
+}
+
+function prevCard() {
+  if (currentIndex > 0) {
+    currentIndex--;
+    isFlipped = false;
+    document.getElementById('card').classList.remove('flipped');
+    updateCard();
+  }
+}
+
+init();
+</script>
+</body>
+</html>
